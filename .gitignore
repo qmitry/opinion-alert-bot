@@ -1,0 +1,35 @@
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+bot
+
+# Test files
+*.test
+*.out
+
+# Dependencies
+vendor/
+
+# Environment
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+
+# Database
+*.db
+data/
+
+# Claude Code
+.claude/
