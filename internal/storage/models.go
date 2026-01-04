@@ -16,6 +16,7 @@ type Alert struct {
 	ID           int64     `db:"id"`
 	UserID       int64     `db:"user_id"`
 	MarketID     string    `db:"market_id"`
+	MarketName   string    `db:"market_name"`
 	ThresholdPct float64   `db:"threshold_pct"`
 	IsActive     bool      `db:"is_active"`
 	CreatedAt    time.Time `db:"created_at"`

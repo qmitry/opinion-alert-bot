@@ -2,6 +2,7 @@ package telegram
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -74,7 +75,7 @@ func (b *Bot) handleMarketIDInput(ctx context.Context, message *tgbotapi.Message
 	}
 
 	// Validate market exists by fetching details
-	_, err := b.apiClient.GetMarketDetails(ctx, marketID)
+	marketDetails, err := b.apiClient.GetMarketDetails(ctx, marketID)
 	if err != nil {
 		b.log.Warnf("Market %s not found: %v", marketID, err)
 		b.SendMessage(message.Chat.ID, MsgMarketNotFound, BuildBackButton())
@@ -82,12 +83,15 @@ func (b *Bot) handleMarketIDInput(ctx context.Context, message *tgbotapi.Message
 		return
 	}
 
-	// Store market ID and move to next step
+	// Store market ID and name, move to next step
 	state := b.getUserState(message.From.ID)
 	state.MarketID = marketID
+	state.Data["market_name"] = marketDetails.MarketTitle
 	state.Step = "awaiting_threshold"
 
-	b.SendMessage(message.Chat.ID, MsgThresholdPrompt, nil)
+	// Confirm market and ask for threshold
+	confirmMsg := fmt.Sprintf("Market found: *%s*\n\n%s", marketDetails.MarketTitle, MsgThresholdPrompt)
+	b.SendMessage(message.Chat.ID, confirmMsg, nil)
 }
 
 // handleThresholdInput processes threshold percentage input
@@ -111,8 +115,14 @@ func (b *Bot) handleThresholdInput(ctx context.Context, message *tgbotapi.Messag
 		return
 	}
 
+	// Get market name from state (was saved during market ID validation)
+	marketName, _ := state.Data["market_name"].(string)
+	if marketName == "" {
+		marketName = "Market " + state.MarketID
+	}
+
 	// Create the alert
-	_, err = b.storage.CreateAlert(ctx, user.ID, state.MarketID, threshold)
+	_, err = b.storage.CreateAlert(ctx, user.ID, state.MarketID, marketName, threshold)
 	if err != nil {
 		if strings.Contains(err.Error(), "cannot track more than") {
 			b.SendMessage(message.Chat.ID, MsgMaxMarketsReached, BuildMainMenu())
@@ -124,8 +134,9 @@ func (b *Bot) handleThresholdInput(ctx context.Context, message *tgbotapi.Messag
 		return
 	}
 
-	// Success
-	successMsg := formatString(MsgAlertCreated, threshold)
+	// Success - show market name
+	successMsg := fmt.Sprintf("✅ Alert created successfully!\n\n*Market:* %s\n*Threshold:* ±%.1f%%\n\nYou'll be notified when the price changes by this amount.",
+		marketName, threshold)
 	b.SendMessage(message.Chat.ID, successMsg, BuildMainMenu())
 	b.clearUserState(message.From.ID)
 }

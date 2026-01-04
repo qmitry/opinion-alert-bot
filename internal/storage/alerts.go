@@ -10,7 +10,7 @@ import (
 const MaxMarketsPerUser = 10
 
 // CreateAlert creates a new price alert for a user
-func (s *Storage) CreateAlert(ctx context.Context, userID int64, marketID string, thresholdPct float64) (*Alert, error) {
+func (s *Storage) CreateAlert(ctx context.Context, userID int64, marketID, marketName string, thresholdPct float64) (*Alert, error) {
 	// Check if user is already tracking 10 unique markets
 	trackedMarkets, err := s.GetTrackedMarketsByUserID(ctx, userID)
 	if err != nil {
@@ -32,18 +32,18 @@ func (s *Storage) CreateAlert(ctx context.Context, userID int64, marketID string
 	}
 
 	query := `
-		INSERT INTO alerts (user_id, market_id, threshold_pct, is_active, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING id, user_id, market_id, threshold_pct, is_active, created_at, updated_at
+		INSERT INTO alerts (user_id, market_id, market_name, threshold_pct, is_active, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id, user_id, market_id, market_name, threshold_pct, is_active, created_at, updated_at
 	`
 
 	now := time.Now()
 	alert := &Alert{}
 	err = s.db.QueryRowContext(
 		ctx, query,
-		userID, marketID, thresholdPct, true, now, now,
+		userID, marketID, marketName, thresholdPct, true, now, now,
 	).Scan(
-		&alert.ID, &alert.UserID, &alert.MarketID, &alert.ThresholdPct, &alert.IsActive, &alert.CreatedAt, &alert.UpdatedAt,
+		&alert.ID, &alert.UserID, &alert.MarketID, &alert.MarketName, &alert.ThresholdPct, &alert.IsActive, &alert.CreatedAt, &alert.UpdatedAt,
 	)
 
 	if err != nil {
@@ -57,7 +57,7 @@ func (s *Storage) CreateAlert(ctx context.Context, userID int64, marketID string
 // GetAlertsByUserID retrieves all alerts for a user
 func (s *Storage) GetAlertsByUserID(ctx context.Context, userID int64) ([]Alert, error) {
 	query := `
-		SELECT id, user_id, market_id, threshold_pct, is_active, created_at, updated_at
+		SELECT id, user_id, market_id, market_name, threshold_pct, is_active, created_at, updated_at
 		FROM alerts
 		WHERE user_id = $1
 		ORDER BY created_at DESC
@@ -72,7 +72,7 @@ func (s *Storage) GetAlertsByUserID(ctx context.Context, userID int64) ([]Alert,
 	var alerts []Alert
 	for rows.Next() {
 		var alert Alert
-		if err := rows.Scan(&alert.ID, &alert.UserID, &alert.MarketID, &alert.ThresholdPct, &alert.IsActive, &alert.CreatedAt, &alert.UpdatedAt); err != nil {
+		if err := rows.Scan(&alert.ID, &alert.UserID, &alert.MarketID, &alert.MarketName, &alert.ThresholdPct, &alert.IsActive, &alert.CreatedAt, &alert.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("failed to scan alert: %w", err)
 		}
 		alerts = append(alerts, alert)
@@ -84,7 +84,7 @@ func (s *Storage) GetAlertsByUserID(ctx context.Context, userID int64) ([]Alert,
 // GetActiveAlerts retrieves all active alerts
 func (s *Storage) GetActiveAlerts(ctx context.Context) ([]Alert, error) {
 	query := `
-		SELECT id, user_id, market_id, threshold_pct, is_active, created_at, updated_at
+		SELECT id, user_id, market_id, market_name, threshold_pct, is_active, created_at, updated_at
 		FROM alerts
 		WHERE is_active = true
 		ORDER BY market_id
@@ -99,7 +99,7 @@ func (s *Storage) GetActiveAlerts(ctx context.Context) ([]Alert, error) {
 	var alerts []Alert
 	for rows.Next() {
 		var alert Alert
-		if err := rows.Scan(&alert.ID, &alert.UserID, &alert.MarketID, &alert.ThresholdPct, &alert.IsActive, &alert.CreatedAt, &alert.UpdatedAt); err != nil {
+		if err := rows.Scan(&alert.ID, &alert.UserID, &alert.MarketID, &alert.MarketName, &alert.ThresholdPct, &alert.IsActive, &alert.CreatedAt, &alert.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("failed to scan alert: %w", err)
 		}
 		alerts = append(alerts, alert)
@@ -187,14 +187,14 @@ func (s *Storage) DeleteAlert(ctx context.Context, alertID, userID int64) error 
 // GetAlert retrieves an alert by ID
 func (s *Storage) GetAlert(ctx context.Context, alertID int64) (*Alert, error) {
 	query := `
-		SELECT id, user_id, market_id, threshold_pct, is_active, created_at, updated_at
+		SELECT id, user_id, market_id, market_name, threshold_pct, is_active, created_at, updated_at
 		FROM alerts
 		WHERE id = $1
 	`
 
 	alert := &Alert{}
 	err := s.db.QueryRowContext(ctx, query, alertID).Scan(
-		&alert.ID, &alert.UserID, &alert.MarketID, &alert.ThresholdPct, &alert.IsActive, &alert.CreatedAt, &alert.UpdatedAt,
+		&alert.ID, &alert.UserID, &alert.MarketID, &alert.MarketName, &alert.ThresholdPct, &alert.IsActive, &alert.CreatedAt, &alert.UpdatedAt,
 	)
 
 	if err != nil {

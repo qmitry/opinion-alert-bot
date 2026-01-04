@@ -78,11 +78,18 @@ func (s *Storage) RunMigrations() error {
 			id BIGSERIAL PRIMARY KEY,
 			user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 			market_id VARCHAR(255) NOT NULL,
+			market_name TEXT,
 			threshold_pct DECIMAL NOT NULL,
 			is_active BOOLEAN NOT NULL DEFAULT true,
 			created_at TIMESTAMP NOT NULL DEFAULT NOW(),
 			updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 		)`,
+
+		// Add market_name column if it doesn't exist (for existing databases)
+		`ALTER TABLE alerts ADD COLUMN IF NOT EXISTS market_name TEXT`,
+
+		// Update existing NULL market_name values to use market_id as fallback
+		`UPDATE alerts SET market_name = 'Market #' || market_id WHERE market_name IS NULL`,
 
 		// Token prices table
 		`CREATE TABLE IF NOT EXISTS token_prices (

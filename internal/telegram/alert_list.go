@@ -32,6 +32,7 @@ func (b *Bot) showMyAlerts(ctx context.Context, chatID, userID int64) {
 		alertInfo := AlertInfo{
 			ID:           alert.ID,
 			MarketID:     alert.MarketID,
+			MarketName:   alert.MarketName,
 			ThresholdPct: alert.ThresholdPct,
 		}
 		alertsByMarket[alert.MarketID] = append(alertsByMarket[alert.MarketID], alertInfo)
