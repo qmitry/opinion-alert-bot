@@ -15,7 +15,6 @@ Features:
 - Price spike detection
 - Set unlimited price alerts per market
 - Real-time notifications
-- Track up to 10 markets
 
 Use the menu below to get started.`
 
@@ -98,12 +97,22 @@ func FormatAlertsList(alerts map[string][]AlertInfo) string {
 			marketName = "Market"
 		}
 
-		// Create display name with market ID
-		displayName := fmt.Sprintf("%s #%s", marketName, marketID)
+		// Create display name with market ID (only if not already included)
+		var displayName string
+		if strings.HasPrefix(marketName, "Market #") {
+			// Already has the ID from migration, use as-is
+			displayName = marketName
+		} else if marketName == "Market" {
+			// Empty name, add ID
+			displayName = fmt.Sprintf("Market #%s", marketID)
+		} else {
+			// Real market name, append ID
+			displayName = fmt.Sprintf("%s #%s", marketName, marketID)
+		}
 
-		// Create clickable link to the market
+		// Create clickable link to the market (don't escape markdown syntax)
 		marketURL := fmt.Sprintf("https://app.opinion.trade/detail?topicId=%s", marketID)
-		sb.WriteString(fmt.Sprintf("*[%s](%s)*\n", escapeMarkdown(displayName), marketURL))
+		sb.WriteString(fmt.Sprintf("*[%s](%s)*\n", displayName, marketURL))
 
 		for i, alert := range alertList {
 			sb.WriteString(fmt.Sprintf("%d. Threshold: ±%.1f%%\n", i+1, alert.ThresholdPct))
@@ -131,12 +140,22 @@ func FormatMarketsList(markets []MarketInfo) string {
 			name = "Market"
 		}
 
-		// Create display name with market ID
-		displayName := fmt.Sprintf("%s #%s", name, market.MarketID)
+		// Create display name with market ID (only if not already included)
+		var displayName string
+		if strings.HasPrefix(name, "Market #") {
+			// Already has the ID from migration, use as-is
+			displayName = name
+		} else if name == "Market" {
+			// Empty name, add ID
+			displayName = fmt.Sprintf("Market #%s", market.MarketID)
+		} else {
+			// Real market name, append ID
+			displayName = fmt.Sprintf("%s #%s", name, market.MarketID)
+		}
 
-		// Create clickable link to the market
+		// Create clickable link to the market (don't escape markdown syntax)
 		marketURL := fmt.Sprintf("https://app.opinion.trade/detail?topicId=%s", market.MarketID)
-		sb.WriteString(fmt.Sprintf("%d. [%s](%s)\n", i+1, escapeMarkdown(displayName), marketURL))
+		sb.WriteString(fmt.Sprintf("%d. [%s](%s)\n", i+1, displayName, marketURL))
 	}
 
 	return sb.String()
