@@ -107,9 +107,10 @@ func (b *Bot) handleSelectMarketCallback(ctx context.Context, callback *tgbotapi
 	b.api.Send(deleteMsg)
 
 	// Send threshold prompt
-	confirmMsg := fmt.Sprintf("Market selected: *%s*\n\n%s", marketDetails.MarketTitle, MsgThresholdPrompt)
+	confirmMsg := fmt.Sprintf("Market selected: <b>%s</b>\n\n%s", marketDetails.MarketTitle, MsgThresholdPrompt)
 	msg := tgbotapi.NewMessage(callback.Message.Chat.ID, confirmMsg)
-	msg.ParseMode = "Markdown"
+	msg.ParseMode = "HTML"
+	msg.DisableWebPagePreview = true
 	b.api.Send(msg)
 }
 
@@ -124,7 +125,8 @@ func (b *Bot) handleCustomMarketCallback(ctx context.Context, callback *tgbotapi
 
 	// Send market ID prompt
 	msg := tgbotapi.NewMessage(callback.Message.Chat.ID, MsgMarketIDPrompt)
-	msg.ParseMode = "Markdown"
+	msg.ParseMode = "HTML"
+	msg.DisableWebPagePreview = true
 	b.api.Send(msg)
 }
 
@@ -141,7 +143,7 @@ func (b *Bot) handleMyMarketsCallback(ctx context.Context, callback *tgbotapi.Ca
 // handleHelpCallback shows the help message
 func (b *Bot) handleHelpCallback(ctx context.Context, callback *tgbotapi.CallbackQuery) {
 	msg := tgbotapi.NewEditMessageText(callback.Message.Chat.ID, callback.Message.MessageID, MsgHelp)
-	msg.ParseMode = "Markdown"
+	msg.ParseMode = "HTML"
 	keyboard := BuildBackButton()
 	msg.ReplyMarkup = &keyboard
 	b.api.Send(msg)

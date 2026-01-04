@@ -90,7 +90,7 @@ func (b *Bot) handleMarketIDInput(ctx context.Context, message *tgbotapi.Message
 	state.Step = "awaiting_threshold"
 
 	// Confirm market and ask for threshold
-	confirmMsg := fmt.Sprintf("Market found: *%s*\n\n%s", marketDetails.MarketTitle, MsgThresholdPrompt)
+	confirmMsg := fmt.Sprintf("Market found: <b>%s</b>\n\n%s", marketDetails.MarketTitle, MsgThresholdPrompt)
 	b.SendMessage(message.Chat.ID, confirmMsg, nil)
 }
 
@@ -135,7 +135,7 @@ func (b *Bot) handleThresholdInput(ctx context.Context, message *tgbotapi.Messag
 	}
 
 	// Success - show market name
-	successMsg := fmt.Sprintf("✅ Alert created successfully!\n\n*Market:* %s\n*Threshold:* ±%.1f%%\n\nYou'll be notified when the price changes by this amount.",
+	successMsg := fmt.Sprintf("✅ Alert created successfully!\n\n<b>Market:</b> %s\n<b>Threshold:</b> ±%.1f%%\n\nYou'll be notified when the price changes by this amount.",
 		marketName, threshold)
 	b.SendMessage(message.Chat.ID, successMsg, BuildMainMenu())
 	b.clearUserState(message.From.ID)

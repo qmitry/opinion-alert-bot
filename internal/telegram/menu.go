@@ -40,8 +40,21 @@ func BuildAlertListMenu(alerts map[string][]AlertInfo) tgbotapi.InlineKeyboardMa
 	for marketID, alertList := range alerts {
 		// Market header (not clickable)
 		for _, alert := range alertList {
+			// Use market name if available
+			displayName := alert.MarketName
+			if displayName == "" || displayName == "Market #"+marketID {
+				displayName = "Market #" + marketID
+			} else {
+				displayName = fmt.Sprintf("%s #%s", displayName, marketID)
+			}
+
+			// Truncate if too long for button (max 64 chars for Telegram)
+			if len(displayName) > 35 {
+				displayName = displayName[:32] + "..."
+			}
+
 			button := tgbotapi.NewInlineKeyboardButtonData(
-				fmt.Sprintf("Market #%s - ±%.1f%% (Delete)", marketID, alert.ThresholdPct),
+				fmt.Sprintf("%s - ±%.1f%% (Delete)", displayName, alert.ThresholdPct),
 				fmt.Sprintf("%s_%d", CallbackDeleteAlert, alert.ID),
 			)
 			rows = append(rows, tgbotapi.NewInlineKeyboardRow(button))

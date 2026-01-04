@@ -18,26 +18,26 @@ Features:
 
 Use the menu below to get started.`
 
-	MsgHelp = `*Opinion.Trade Alert Bot - Help*
+	MsgHelp = `<b>Opinion.Trade Alert Bot - Help</b>
 
-*How it works:*
+<b>How it works:</b>
 The bot tracks market prices and alerts you when prices make changes and spikes. If the price change exceeds your threshold, you'll receive an alert.
 
-*Commands:*
+<b>Commands:</b>
 /start - Show main menu
 /help - Show this help message
 
-*Creating Alerts:*
+<b>Creating Alerts:</b>
 1. Click "Create Alert"
 2. Enter the market ID (you can find it in the URL as topicId when the market is open on Opinion.Trade)
 3. Enter your minimum price change threshold (e.g., 20 for ±20%)
 
-*Limits:*
+<b>Limits:</b>
 - Maximum 10 markets per user
 - Unlimited alerts per market`
 
 	MsgSelectMarket      = "Select a market to create an alert, or enter a custom market ID:"
-	MsgMarketIDPrompt    = "Please enter the Opinion.Trade market ID:\n\nTip: You can find the market ID in the URL as topicId when viewing a market on Opinion.Trade (e.g., *app.opinion. trade/detail?topicId=1098* → market ID is 1098)"
+	MsgMarketIDPrompt    = "Please enter the Opinion.Trade market ID:\n\nTip: You can find the market ID in the URL as topicId when viewing a market on Opinion.Trade (e.g., <b>app.opinion.trade/detail?topicId=1098</b> → market ID is 1098)"
 	MsgThresholdPrompt   = "Enter the minimum price change threshold percentage (e.g., 20 for ±20%):"
 	MsgAlertCreated      = "Alert created successfully! You'll be notified when the price changes by ±%.1f%% within 1 minute."
 	MsgAlertDeleted      = "Alert deleted successfully."
@@ -62,16 +62,16 @@ func FormatAlertNotification(marketTitle, marketID string, previousPrice, curren
 
 	marketURL := fmt.Sprintf("https://app.opinion.trade/detail?topicId=%s", marketID)
 
-	return fmt.Sprintf(`📈 *Price Spike Alert!*
+	return fmt.Sprintf(`📈 <b>Price Spike Alert!</b>
 
-*Market:* [%s](%s)
-*Current Price:* $%.4f
-*Previous Price:* $%.4f
-*Change:* %s%.2f%% (threshold: ±%.1f%%)
+<b>Market:</b> <a href="%s">%s</a>
+<b>Current Price:</b> $%.4f
+<b>Previous Price:</b> $%.4f
+<b>Change:</b> %s%.2f%% (threshold: ±%.1f%%)
 
-*Triggered:* %s UTC`,
-		escapeMarkdown(marketTitle),
+<b>Triggered:</b> %s UTC`,
 		marketURL,
+		marketTitle,
 		currentPrice,
 		previousPrice,
 		direction,
@@ -88,7 +88,7 @@ func FormatAlertsList(alerts map[string][]AlertInfo) string {
 	}
 
 	var sb strings.Builder
-	sb.WriteString("*Your Alerts*\n\n")
+	sb.WriteString("<b>Your Alerts</b>\n\n")
 
 	for marketID, alertList := range alerts {
 		// Use market name if available
@@ -110,9 +110,9 @@ func FormatAlertsList(alerts map[string][]AlertInfo) string {
 			displayName = fmt.Sprintf("%s #%s", marketName, marketID)
 		}
 
-		// Create clickable link to the market (don't escape markdown syntax)
+		// Create clickable link to the market (HTML format)
 		marketURL := fmt.Sprintf("https://app.opinion.trade/detail?topicId=%s", marketID)
-		sb.WriteString(fmt.Sprintf("*[%s](%s)*\n", displayName, marketURL))
+		sb.WriteString(fmt.Sprintf("<b><a href=\"%s\">%s</a></b>\n", marketURL, displayName))
 
 		for i, alert := range alertList {
 			sb.WriteString(fmt.Sprintf("%d. Threshold: ±%.1f%%\n", i+1, alert.ThresholdPct))
@@ -120,7 +120,7 @@ func FormatAlertsList(alerts map[string][]AlertInfo) string {
 		sb.WriteString("\n")
 	}
 
-	sb.WriteString(fmt.Sprintf("_Total markets tracked: %d/10_", len(alerts)))
+	sb.WriteString(fmt.Sprintf("<i>Total markets tracked: %d/10</i>", len(alerts)))
 
 	return sb.String()
 }
@@ -132,7 +132,7 @@ func FormatMarketsList(markets []MarketInfo) string {
 	}
 
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("*Tracked Markets* (%d/10)\n\n", len(markets)))
+	sb.WriteString(fmt.Sprintf("<b>Tracked Markets</b> (%d/10)\n\n", len(markets)))
 
 	for i, market := range markets {
 		name := market.MarketName
@@ -153,9 +153,9 @@ func FormatMarketsList(markets []MarketInfo) string {
 			displayName = fmt.Sprintf("%s #%s", name, market.MarketID)
 		}
 
-		// Create clickable link to the market (don't escape markdown syntax)
+		// Create clickable link to the market (HTML format)
 		marketURL := fmt.Sprintf("https://app.opinion.trade/detail?topicId=%s", market.MarketID)
-		sb.WriteString(fmt.Sprintf("%d. [%s](%s)\n", i+1, displayName, marketURL))
+		sb.WriteString(fmt.Sprintf("%d. <a href=\"%s\">%s</a>\n", i+1, marketURL, displayName))
 	}
 
 	return sb.String()

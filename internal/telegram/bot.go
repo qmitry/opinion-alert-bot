@@ -113,7 +113,7 @@ func (b *Bot) clearUserState(userID int64) {
 // SendMessage sends a message to a user
 func (b *Bot) SendMessage(chatID int64, text string, keyboard interface{}) error {
 	msg := tgbotapi.NewMessage(chatID, text)
-	msg.ParseMode = "Markdown"
+	msg.ParseMode = "HTML"
 	msg.DisableWebPagePreview = true
 
 	if keyboard != nil {
@@ -127,7 +127,7 @@ func (b *Bot) SendMessage(chatID int64, text string, keyboard interface{}) error
 // SendAlertNotification sends a price alert notification to a user
 func (b *Bot) SendAlertNotification(chatID int64, message string) error {
 	msg := tgbotapi.NewMessage(chatID, message)
-	msg.ParseMode = "Markdown"
+	msg.ParseMode = "HTML"
 	msg.DisableWebPagePreview = true
 
 	_, err := b.api.Send(msg)
