@@ -37,7 +37,7 @@ The bot tracks market prices and alerts you when prices make changes and spikes.
 - Maximum 10 markets per user
 - Unlimited alerts per market`
 
-	MsgMarketIDPrompt    = "Please enter the Opinion.Trade market ID:\n\n_Tip: You can find the market ID in the URL when viewing a market on Opinion.Trade (e.g., opinion.trade/market/2368 → market ID is 2368)_"
+	MsgMarketIDPrompt    = "Please enter the Opinion.Trade market ID:\n\nTip: You can find the market ID in the URL when viewing a market on Opinion.Trade (e.g., app.opinion.trade/detail?topicId=1098 → market ID is 1098)"
 	MsgThresholdPrompt   = "Enter the minimum price change threshold percentage (e.g., 20 for ±20%):"
 	MsgAlertCreated      = "Alert created successfully! You'll be notified when the price changes by ±%.1f%% within 1 minute."
 	MsgAlertDeleted      = "Alert deleted successfully."
