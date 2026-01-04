@@ -162,6 +162,40 @@ func (s *Storage) GetUniqueTrackedMarkets(ctx context.Context) ([]string, error)
 	return markets, nil
 }
 
+// MarketWithName holds market ID and name
+type MarketWithName struct {
+	MarketID   string
+	MarketName string
+}
+
+// GetRandomTrackedMarkets returns random tracked markets with names (limit 5)
+func (s *Storage) GetRandomTrackedMarkets(ctx context.Context, limit int) ([]MarketWithName, error) {
+	query := `
+		SELECT DISTINCT market_id, market_name
+		FROM alerts
+		WHERE is_active = true AND market_name IS NOT NULL AND market_name != ''
+		ORDER BY RANDOM()
+		LIMIT $1
+	`
+
+	rows, err := s.db.QueryContext(ctx, query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get random tracked markets: %w", err)
+	}
+	defer rows.Close()
+
+	var markets []MarketWithName
+	for rows.Next() {
+		var market MarketWithName
+		if err := rows.Scan(&market.MarketID, &market.MarketName); err != nil {
+			return nil, fmt.Errorf("failed to scan market: %w", err)
+		}
+		markets = append(markets, market)
+	}
+
+	return markets, nil
+}
+
 // DeleteAlert deletes an alert by ID
 func (s *Storage) DeleteAlert(ctx context.Context, alertID, userID int64) error {
 	query := `DELETE FROM alerts WHERE id = $1 AND user_id = $2`

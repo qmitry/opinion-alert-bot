@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/qmitry/opinion-alert-bot/internal/storage"
 )
 
 // handleCallbackQuery processes inline keyboard button clicks
@@ -46,12 +47,29 @@ func (b *Bot) handleCallbackQuery(ctx context.Context, callback *tgbotapi.Callba
 
 // handleCreateAlertCallback initiates the alert creation flow
 func (b *Bot) handleCreateAlertCallback(ctx context.Context, callback *tgbotapi.CallbackQuery) {
+	// Fetch random tracked markets from database
+	randomMarkets, err := b.storage.GetRandomTrackedMarkets(ctx, 5)
+	if err != nil {
+		b.log.Errorf("Failed to get random markets: %v", err)
+		// Fall back to empty list
+		randomMarkets = []storage.MarketWithName{}
+	}
+
+	// Convert to FeaturedMarket format
+	featuredMarkets := make([]FeaturedMarket, len(randomMarkets))
+	for i, market := range randomMarkets {
+		featuredMarkets[i] = FeaturedMarket{
+			ID:   market.MarketID,
+			Name: market.MarketName,
+		}
+	}
+
 	msg := tgbotapi.NewEditMessageText(
 		callback.Message.Chat.ID,
 		callback.Message.MessageID,
 		MsgSelectMarket,
 	)
-	keyboard := BuildMarketSelectionMenu(FeaturedMarkets)
+	keyboard := BuildMarketSelectionMenu(featuredMarkets)
 	msg.ReplyMarkup = &keyboard
 	b.api.Send(msg)
 }
