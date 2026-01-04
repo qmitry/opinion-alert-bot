@@ -75,6 +75,7 @@ func (b *Bot) handleMarketIDInput(ctx context.Context, message *tgbotapi.Message
 	}
 
 	// Validate market exists by fetching details
+	// For multi-outcome markets, this will automatically select the first outcome token
 	marketDetails, err := b.apiClient.GetMarketDetails(ctx, marketID)
 	if err != nil {
 		b.log.Warnf("Market %s not found: %v", marketID, err)
@@ -83,14 +84,16 @@ func (b *Bot) handleMarketIDInput(ctx context.Context, message *tgbotapi.Message
 		return
 	}
 
-	// Store market ID and name, move to next step
+	// Store market ID, name, and token ID (automatically set for both binary and multi-outcome)
 	state := b.getUserState(message.From.ID)
 	state.MarketID = marketID
 	state.Data["market_name"] = marketDetails.MarketTitle
+	state.Data["token_id"] = marketDetails.YesTokenID
 	state.Step = "awaiting_threshold"
 
 	// Confirm market and ask for threshold
-	confirmMsg := fmt.Sprintf("Market found: <b>%s</b>\n\n%s", marketDetails.MarketTitle, MsgThresholdPrompt)
+	confirmMsg := fmt.Sprintf("✅ Market found: <b>%s</b>\n\n%s",
+		marketDetails.MarketTitle, MsgThresholdPrompt)
 	b.SendMessage(message.Chat.ID, confirmMsg, nil)
 }
 
@@ -115,14 +118,19 @@ func (b *Bot) handleThresholdInput(ctx context.Context, message *tgbotapi.Messag
 		return
 	}
 
-	// Get market name from state (was saved during market ID validation)
+	// Get market name and token ID from state (was saved during market ID validation)
 	marketName, _ := state.Data["market_name"].(string)
 	if marketName == "" {
 		marketName = "Market " + state.MarketID
 	}
 
+	var tokenID *string
+	if tokenIDStr, ok := state.Data["token_id"].(string); ok && tokenIDStr != "" {
+		tokenID = &tokenIDStr
+	}
+
 	// Create the alert
-	_, err = b.storage.CreateAlert(ctx, user.ID, state.MarketID, marketName, threshold)
+	_, err = b.storage.CreateAlert(ctx, user.ID, state.MarketID, marketName, tokenID, threshold)
 	if err != nil {
 		if strings.Contains(err.Error(), "cannot track more than") {
 			b.SendMessage(message.Chat.ID, MsgMaxMarketsReached, BuildMainMenu())
@@ -141,27 +149,3 @@ func (b *Bot) handleThresholdInput(ctx context.Context, message *tgbotapi.Messag
 	b.clearUserState(message.From.ID)
 }
 
-// formatString is a helper to format strings with placeholders
-func formatString(format string, args ...interface{}) string {
-	return strings.TrimSpace(formatMessage(format, args...))
-}
-
-func formatMessage(format string, args ...interface{}) string {
-	if len(args) == 0 {
-		return format
-	}
-
-	// Simple sprintf-like formatting
-	result := format
-	for _, arg := range args {
-		switch v := arg.(type) {
-		case float64:
-			result = strings.Replace(result, "%.1f", strconv.FormatFloat(v, 'f', 1, 64), 1)
-		case int:
-			result = strings.Replace(result, "%d", strconv.Itoa(v), 1)
-		case string:
-			result = strings.Replace(result, "%s", v, 1)
-		}
-	}
-	return result
-}

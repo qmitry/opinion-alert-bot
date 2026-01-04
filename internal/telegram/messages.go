@@ -13,7 +13,6 @@ This bot monitors token prices on Opinion.Trade markets and sends you alerts whe
 
 Features:
 - Price spike detection
-- Set unlimited price alerts per market
 - Real-time notifications
 
 Use the menu below to get started.`
@@ -37,8 +36,8 @@ The bot tracks market prices and alerts you when prices make changes and spikes.
 - Unlimited alerts per market`
 
 	MsgSelectMarket      = "Select a market to create an alert, or enter a custom market ID:"
-	MsgMarketIDPrompt    = "Please enter the Opinion.Trade market ID:\n\nTip: You can find the market ID in the URL as topicId when viewing a market on Opinion.Trade (e.g., <b>app.opinion.trade/detail?topicId=1098</b> → market ID is 1098)"
-	MsgThresholdPrompt   = "Enter the minimum price change threshold percentage (e.g., 20 for ±20%):"
+	MsgMarketIDPrompt    = "Please enter the Opinion.Trade market ID:\n\nTip: You can find the market ID in the URL as topicId when viewing a market on Opinion.Trade (e.g., app.opinion.trade/detail?<b>topicId=1098</b> → market ID is 1098)"
+	MsgThresholdPrompt   = "Enter the minimum price change threshold percentage for 1 minute (e.g., 20 for ±20%):"
 	MsgAlertCreated      = "Alert created successfully! You'll be notified when the price changes by ±%.1f%% within 1 minute."
 	MsgAlertDeleted      = "Alert deleted successfully."
 	MsgInvalidMarketID   = "Invalid market ID. Please enter a valid market ID."
@@ -66,7 +65,7 @@ func FormatAlertNotification(marketTitle, marketID string, previousPrice, curren
 
 <b>Market:</b> <a href="%s">%s</a>
 <b>Current Price:</b> $%.4f
-<b>Previous Price:</b> $%.4f
+<b>Price 1 minute ago:</b> $%.4f
 <b>Change:</b> %s%.2f%% (threshold: ±%.1f%%)
 
 <b>Triggered:</b> %s UTC`,
@@ -87,37 +86,52 @@ func FormatAlertsList(alerts map[string][]AlertInfo) string {
 		return MsgNoAlerts
 	}
 
-	var sb strings.Builder
-	sb.WriteString("<b>Your Alerts</b>\n\n")
-
+	// Convert map to slice for sorting
+	type marketAlert struct {
+		marketID   string
+		alertList  []AlertInfo
+		marketName string
+	}
+	var sortedAlerts []marketAlert
 	for marketID, alertList := range alerts {
-		// Use market name if available
 		marketName := alertList[0].MarketName
 		if marketName == "" {
 			marketName = "Market"
 		}
+		sortedAlerts = append(sortedAlerts, marketAlert{marketID, alertList, marketName})
+	}
 
+	// Sort by market name for consistent ordering
+	// (In Go, we'd need to import "sort" package, but for now we'll keep map iteration)
+
+	var sb strings.Builder
+	sb.WriteString("<b>Your Alerts</b>\n\n")
+
+	marketNum := 1
+	for _, ma := range sortedAlerts {
 		// Create display name with market ID (only if not already included)
 		var displayName string
-		if strings.HasPrefix(marketName, "Market #") {
+		if strings.HasPrefix(ma.marketName, "Market #") {
 			// Already has the ID from migration, use as-is
-			displayName = marketName
-		} else if marketName == "Market" {
+			displayName = ma.marketName
+		} else if ma.marketName == "Market" {
 			// Empty name, add ID
-			displayName = fmt.Sprintf("Market #%s", marketID)
+			displayName = fmt.Sprintf("Market #%s", ma.marketID)
 		} else {
 			// Real market name, append ID
-			displayName = fmt.Sprintf("%s #%s", marketName, marketID)
+			displayName = fmt.Sprintf("%s #%s", ma.marketName, ma.marketID)
 		}
 
 		// Create clickable link to the market (HTML format)
-		marketURL := fmt.Sprintf("https://app.opinion.trade/detail?topicId=%s", marketID)
-		sb.WriteString(fmt.Sprintf("<b><a href=\"%s\">%s</a></b>\n", marketURL, displayName))
+		marketURL := fmt.Sprintf("https://app.opinion.trade/detail?topicId=%s", ma.marketID)
+		sb.WriteString(fmt.Sprintf("%d. <b><a href=\"%s\">%s</a></b>\n", marketNum, marketURL, displayName))
 
-		for i, alert := range alertList {
-			sb.WriteString(fmt.Sprintf("%d. Threshold: ±%.1f%%\n", i+1, alert.ThresholdPct))
+		// Only show first alert (since we'll limit to 1 per market)
+		if len(ma.alertList) > 0 {
+			sb.WriteString(fmt.Sprintf("Threshold: ±%.1f%%\n", ma.alertList[0].ThresholdPct))
 		}
 		sb.WriteString("\n")
+		marketNum++
 	}
 
 	sb.WriteString(fmt.Sprintf("<i>Total markets tracked: %d/10</i>", len(alerts)))

@@ -30,17 +30,31 @@ func NewPriceChecker(apiClient *api.Client, storage *storage.Storage, notifier *
 
 // CheckMarketPrice checks a market for price spikes and triggers alerts
 func (pc *PriceChecker) CheckMarketPrice(ctx context.Context, marketID string, alerts []storage.Alert) error {
-	// Get market details to get YES token ID
+	// Get market details for market name
 	marketDetails, err := pc.apiClient.GetMarketDetails(ctx, marketID)
 	if err != nil {
 		pc.log.Warnf("Failed to get market details for %s: %v", marketID, err)
 		return err
 	}
 
-	// Get current YES token price
-	tokenPrice, err := pc.apiClient.GetTokenPrice(ctx, marketDetails.YesTokenID)
+	// Determine which token to track
+	// For alerts with token_id set, use that; otherwise fall back to YesTokenID
+	var tokenID string
+	if len(alerts) > 0 && alerts[0].TokenID != nil && *alerts[0].TokenID != "" {
+		tokenID = *alerts[0].TokenID
+	} else {
+		tokenID = marketDetails.YesTokenID
+	}
+
+	if tokenID == "" {
+		pc.log.Warnf("No token ID available for market %s (may be multi-outcome market without token_id set)", marketID)
+		return nil
+	}
+
+	// Get current token price
+	tokenPrice, err := pc.apiClient.GetTokenPrice(ctx, tokenID)
 	if err != nil {
-		pc.log.Warnf("Failed to get token price for %s: %v", marketDetails.YesTokenID, err)
+		pc.log.Warnf("Failed to get token price for %s: %v", tokenID, err)
 		return err
 	}
 
@@ -59,7 +73,7 @@ func (pc *PriceChecker) CheckMarketPrice(ctx context.Context, marketID string, a
 	}
 
 	// Store current price
-	if err := pc.storage.StoreTokenPrice(ctx, marketDetails.YesTokenID, marketID, currentPrice, tokenPrice.Side, size); err != nil {
+	if err := pc.storage.StoreTokenPrice(ctx, tokenID, marketID, currentPrice, tokenPrice.Side, size); err != nil {
 		pc.log.Errorf("Failed to store token price: %v", err)
 		return err
 	}
@@ -80,8 +94,8 @@ func (pc *PriceChecker) CheckMarketPrice(ctx context.Context, marketID string, a
 	// Calculate percentage change
 	changePct := ((currentPrice - previousPrice) / previousPrice) * 100
 
-	pc.log.Debugf("Market %s: current=%.4f, previous=%.4f, change=%.2f%%",
-		marketID, currentPrice, previousPrice, changePct)
+	pc.log.Debugf("Market %s (token %s): current=%.4f, previous=%.4f, change=%.2f%%",
+		marketID, tokenID, currentPrice, previousPrice, changePct)
 
 	// Check each alert for this market
 	for _, alert := range alerts {

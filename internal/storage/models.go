@@ -17,6 +17,7 @@ type Alert struct {
 	UserID       int64     `db:"user_id"`
 	MarketID     string    `db:"market_id"`
 	MarketName   string    `db:"market_name"`
+	TokenID      *string   `db:"token_id"` // Nullable for backward compatibility
 	ThresholdPct float64   `db:"threshold_pct"`
 	IsActive     bool      `db:"is_active"`
 	CreatedAt    time.Time `db:"created_at"`

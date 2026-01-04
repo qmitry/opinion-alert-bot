@@ -96,15 +96,30 @@ func (b *Bot) handleSelectMarketCallback(ctx context.Context, callback *tgbotapi
 		return
 	}
 
-	// Store market ID and name, move to threshold input
+	// Store market ID and name
 	state := b.getUserState(callback.From.ID)
 	state.MarketID = marketID
 	state.Data["market_name"] = marketDetails.MarketTitle
-	state.Step = "awaiting_threshold"
 
 	// Delete the market selection message
 	deleteMsg := tgbotapi.NewDeleteMessage(callback.Message.Chat.ID, callback.Message.MessageID)
 	b.api.Send(deleteMsg)
+
+	// Check if it's a multi-outcome market (marketType 1 or no YesTokenID)
+	if marketDetails.MarketType != 0 || marketDetails.YesTokenID == "" {
+		// Multi-outcome market - ask for token ID
+		state.Step = "awaiting_token_id"
+		multiOutcomeMsg := fmt.Sprintf("Market selected: <b>%s</b>\n\n⚠️ This is a multi-outcome market. Please provide the specific token ID you want to track.\n\nYou can find token IDs by:\n1. Opening the market on Opinion.Trade\n2. Inspecting the specific outcome you want to track\n3. Looking for the token ID in the URL or market details", marketDetails.MarketTitle)
+		msg := tgbotapi.NewMessage(callback.Message.Chat.ID, multiOutcomeMsg)
+		msg.ParseMode = "HTML"
+		msg.DisableWebPagePreview = true
+		b.api.Send(msg)
+		return
+	}
+
+	// Binary market - use YesTokenID automatically
+	state.Data["token_id"] = marketDetails.YesTokenID
+	state.Step = "awaiting_threshold"
 
 	// Send threshold prompt
 	confirmMsg := fmt.Sprintf("Market selected: <b>%s</b>\n\n%s", marketDetails.MarketTitle, MsgThresholdPrompt)

@@ -88,8 +88,17 @@ func (s *Storage) RunMigrations() error {
 		// Add market_name column if it doesn't exist (for existing databases)
 		`ALTER TABLE alerts ADD COLUMN IF NOT EXISTS market_name TEXT`,
 
+		// Add token_id column for tracking specific outcomes in multi-outcome markets
+		`ALTER TABLE alerts ADD COLUMN IF NOT EXISTS token_id VARCHAR(255)`,
+
 		// Update existing NULL market_name values to use market_id as fallback
 		`UPDATE alerts SET market_name = 'Market #' || market_id WHERE market_name IS NULL`,
+
+		// Add unique constraint for one alert per market per user
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_alerts_user_market_unique ON alerts(user_id, market_id) WHERE is_active = true`,
+
+		// Increase side column size to handle longer values like "sell-market"
+		`ALTER TABLE token_prices ALTER COLUMN side TYPE VARCHAR(20)`,
 
 		// Token prices table
 		`CREATE TABLE IF NOT EXISTS token_prices (

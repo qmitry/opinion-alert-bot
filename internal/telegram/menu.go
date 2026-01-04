@@ -54,7 +54,7 @@ func BuildAlertListMenu(alerts map[string][]AlertInfo) tgbotapi.InlineKeyboardMa
 			}
 
 			button := tgbotapi.NewInlineKeyboardButtonData(
-				fmt.Sprintf("%s - ±%.1f%% (Delete)", displayName, alert.ThresholdPct),
+				fmt.Sprintf("(Delete) %s - ±%.1f%%", displayName, alert.ThresholdPct),
 				fmt.Sprintf("%s_%d", CallbackDeleteAlert, alert.ID),
 			)
 			rows = append(rows, tgbotapi.NewInlineKeyboardRow(button))
