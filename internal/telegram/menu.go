@@ -8,13 +8,15 @@ import (
 
 // Callback data constants
 const (
-	CallbackCreateAlert  = "create_alert"
-	CallbackMyAlerts     = "my_alerts"
-	CallbackMyMarkets    = "my_markets"
-	CallbackHelp         = "help"
-	CallbackDeleteAlert  = "delete_alert"
+	CallbackCreateAlert   = "create_alert"
+	CallbackMyAlerts      = "my_alerts"
+	CallbackMyMarkets     = "my_markets"
+	CallbackHelp          = "help"
+	CallbackDeleteAlert   = "delete_alert"
 	CallbackConfirmDelete = "confirm_delete"
-	CallbackCancelDelete = "cancel_delete"
+	CallbackCancelDelete  = "cancel_delete"
+	CallbackSelectMarket  = "select_market"
+	CallbackCustomMarket  = "custom_market"
 )
 
 // BuildMainMenu creates the main menu inline keyboard
@@ -71,4 +73,36 @@ func BuildBackButton() tgbotapi.InlineKeyboardMarkup {
 			tgbotapi.NewInlineKeyboardButtonData("« Back to Menu", "back_to_menu"),
 		),
 	)
+}
+
+// BuildMarketSelectionMenu creates a menu with featured markets
+func BuildMarketSelectionMenu(featuredMarkets []FeaturedMarket) tgbotapi.InlineKeyboardMarkup {
+	var rows [][]tgbotapi.InlineKeyboardButton
+
+	// Add featured markets
+	for _, market := range featuredMarkets {
+		// Truncate long market names for button display
+		displayName := market.Name
+		if len(displayName) > 45 {
+			displayName = displayName[:42] + "..."
+		}
+
+		button := tgbotapi.NewInlineKeyboardButtonData(
+			displayName,
+			fmt.Sprintf("%s_%s", CallbackSelectMarket, market.ID),
+		)
+		rows = append(rows, tgbotapi.NewInlineKeyboardRow(button))
+	}
+
+	// Add custom market ID button
+	rows = append(rows, tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData("📝 Enter Custom Market ID", CallbackCustomMarket),
+	))
+
+	// Add back button
+	rows = append(rows, tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData("« Back to Menu", "back_to_menu"),
+	))
+
+	return tgbotapi.NewInlineKeyboardMarkup(rows...)
 }

@@ -2,6 +2,7 @@ package telegram
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -26,6 +27,10 @@ func (b *Bot) handleCallbackQuery(ctx context.Context, callback *tgbotapi.Callba
 		b.handleMyMarketsCallback(ctx, callback)
 	case data == CallbackHelp:
 		b.handleHelpCallback(ctx, callback)
+	case strings.HasPrefix(data, CallbackSelectMarket+"_"):
+		b.handleSelectMarketCallback(ctx, callback)
+	case data == CallbackCustomMarket:
+		b.handleCustomMarketCallback(ctx, callback)
 	case strings.HasPrefix(data, CallbackDeleteAlert+"_"):
 		b.handleDeleteAlertCallback(ctx, callback)
 	case strings.HasPrefix(data, CallbackConfirmDelete+"_"):
@@ -41,10 +46,67 @@ func (b *Bot) handleCallbackQuery(ctx context.Context, callback *tgbotapi.Callba
 
 // handleCreateAlertCallback initiates the alert creation flow
 func (b *Bot) handleCreateAlertCallback(ctx context.Context, callback *tgbotapi.CallbackQuery) {
+	msg := tgbotapi.NewEditMessageText(
+		callback.Message.Chat.ID,
+		callback.Message.MessageID,
+		MsgSelectMarket,
+	)
+	keyboard := BuildMarketSelectionMenu(FeaturedMarkets)
+	msg.ReplyMarkup = &keyboard
+	b.api.Send(msg)
+}
+
+// handleSelectMarketCallback handles selection of a featured market
+func (b *Bot) handleSelectMarketCallback(ctx context.Context, callback *tgbotapi.CallbackQuery) {
+	// Extract market ID from callback data (format: "select_market_123")
+	parts := strings.Split(callback.Data, "_")
+	if len(parts) != 3 {
+		b.log.Errorf("Invalid select market callback data: %s", callback.Data)
+		return
+	}
+
+	marketID := parts[2]
+
+	// Validate market exists by fetching details
+	marketDetails, err := b.apiClient.GetMarketDetails(ctx, marketID)
+	if err != nil {
+		b.log.Warnf("Market %s not found: %v", marketID, err)
+		msg := tgbotapi.NewMessage(callback.Message.Chat.ID, MsgMarketNotFound)
+		keyboard := BuildBackButton()
+		msg.ReplyMarkup = keyboard
+		b.api.Send(msg)
+		return
+	}
+
+	// Store market ID and name, move to threshold input
+	state := b.getUserState(callback.From.ID)
+	state.MarketID = marketID
+	state.Data["market_name"] = marketDetails.MarketTitle
+	state.Step = "awaiting_threshold"
+
+	// Delete the market selection message
+	deleteMsg := tgbotapi.NewDeleteMessage(callback.Message.Chat.ID, callback.Message.MessageID)
+	b.api.Send(deleteMsg)
+
+	// Send threshold prompt
+	confirmMsg := fmt.Sprintf("Market selected: *%s*\n\n%s", marketDetails.MarketTitle, MsgThresholdPrompt)
+	msg := tgbotapi.NewMessage(callback.Message.Chat.ID, confirmMsg)
+	msg.ParseMode = "Markdown"
+	b.api.Send(msg)
+}
+
+// handleCustomMarketCallback prompts user to enter custom market ID
+func (b *Bot) handleCustomMarketCallback(ctx context.Context, callback *tgbotapi.CallbackQuery) {
 	state := b.getUserState(callback.From.ID)
 	state.Step = "awaiting_market_id"
 
+	// Delete the market selection message
+	deleteMsg := tgbotapi.NewDeleteMessage(callback.Message.Chat.ID, callback.Message.MessageID)
+	b.api.Send(deleteMsg)
+
+	// Send market ID prompt
 	msg := tgbotapi.NewMessage(callback.Message.Chat.ID, MsgMarketIDPrompt)
+	msg.ParseMode = "Markdown"
 	b.api.Send(msg)
 }
 

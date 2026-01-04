@@ -114,6 +114,7 @@ func (b *Bot) clearUserState(userID int64) {
 func (b *Bot) SendMessage(chatID int64, text string, keyboard interface{}) error {
 	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ParseMode = "Markdown"
+	msg.DisableWebPagePreview = true
 
 	if keyboard != nil {
 		msg.ReplyMarkup = keyboard
@@ -127,6 +128,7 @@ func (b *Bot) SendMessage(chatID int64, text string, keyboard interface{}) error
 func (b *Bot) SendAlertNotification(chatID int64, message string) error {
 	msg := tgbotapi.NewMessage(chatID, message)
 	msg.ParseMode = "Markdown"
+	msg.DisableWebPagePreview = true
 
 	_, err := b.api.Send(msg)
 	if err != nil {

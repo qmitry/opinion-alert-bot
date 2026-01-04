@@ -37,6 +37,7 @@ The bot tracks market prices and alerts you when prices make changes and spikes.
 - Maximum 10 markets per user
 - Unlimited alerts per market`
 
+	MsgSelectMarket      = "Select a market to create an alert, or enter a custom market ID:"
 	MsgMarketIDPrompt    = "Please enter the Opinion.Trade market ID:\n\nTip: You can find the market ID in the URL when viewing a market on Opinion.Trade (e.g., app.opinion.trade/detail?topicId=1098 → market ID is 1098)"
 	MsgThresholdPrompt   = "Enter the minimum price change threshold percentage (e.g., 20 for ±20%):"
 	MsgAlertCreated      = "Alert created successfully! You'll be notified when the price changes by ±%.1f%% within 1 minute."
@@ -60,16 +61,18 @@ func FormatAlertNotification(marketTitle, marketID string, previousPrice, curren
 		direction = ""
 	}
 
+	marketURL := fmt.Sprintf("https://app.opinion.trade/detail?topicId=%s", marketID)
+
 	return fmt.Sprintf(`📈 *Price Spike Alert!*
 
-*Market:* %s (#%s)
+*Market:* [%s](%s)
 *Current Price:* $%.4f
-*1 min ago:* $%.4f
+*Previous Price:* $%.4f
 *Change:* %s%.2f%% (threshold: ±%.1f%%)
 
 *Triggered:* %s UTC`,
 		escapeMarkdown(marketTitle),
-		marketID,
+		marketURL,
 		currentPrice,
 		previousPrice,
 		direction,
@@ -139,6 +142,20 @@ type AlertInfo struct {
 type MarketInfo struct {
 	MarketID   string
 	MarketName string
+}
+
+// FeaturedMarket holds information about a featured market
+type FeaturedMarket struct {
+	ID   string
+	Name string
+}
+
+// FeaturedMarkets is a list of popular markets to suggest to users
+var FeaturedMarkets = []FeaturedMarket{
+	{ID: "2368", Name: "Tim Cook out as Apple CEO by March 31?"},
+	{ID: "1098", Name: "First to 5k: Gold or ETH?"},
+	{ID: "2366", Name: "Trump Executive Order on Bitcoin Strategic Reserve?"},
+	{ID: "2357", Name: "Elon Musk posts on X 100+ times in a day?"},
 }
 
 // escapeMarkdown escapes special characters for Telegram MarkdownV2
