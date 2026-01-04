@@ -171,9 +171,9 @@ type MarketWithName struct {
 // GetRandomTrackedMarkets returns random tracked markets with names (limit 5)
 func (s *Storage) GetRandomTrackedMarkets(ctx context.Context, limit int) ([]MarketWithName, error) {
 	query := `
-		SELECT DISTINCT market_id, market_name
+		SELECT DISTINCT market_id, COALESCE(NULLIF(market_name, ''), 'Market #' || market_id) as market_name
 		FROM alerts
-		WHERE is_active = true AND market_name IS NOT NULL AND market_name != ''
+		WHERE is_active = true
 		ORDER BY RANDOM()
 		LIMIT $1
 	`
