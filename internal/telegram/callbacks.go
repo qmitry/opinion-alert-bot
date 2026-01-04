@@ -32,6 +32,10 @@ func (b *Bot) handleCallbackQuery(ctx context.Context, callback *tgbotapi.Callba
 		b.handleSelectMarketCallback(ctx, callback)
 	case data == CallbackCustomMarket:
 		b.handleCustomMarketCallback(ctx, callback)
+	case strings.HasPrefix(data, CallbackSelectThreshold+"_"):
+		b.handleSelectThresholdCallback(ctx, callback)
+	case data == CallbackCustomThreshold:
+		b.handleCustomThresholdCallback(ctx, callback)
 	case strings.HasPrefix(data, CallbackDeleteAlert+"_"):
 		b.handleDeleteAlertCallback(ctx, callback)
 	case strings.HasPrefix(data, CallbackConfirmDelete+"_"):
@@ -96,36 +100,23 @@ func (b *Bot) handleSelectMarketCallback(ctx context.Context, callback *tgbotapi
 		return
 	}
 
-	// Store market ID and name
+	// Store market ID, name, and token ID (automatically set for both binary and multi-outcome)
 	state := b.getUserState(callback.From.ID)
 	state.MarketID = marketID
 	state.Data["market_name"] = marketDetails.MarketTitle
+	state.Data["token_id"] = marketDetails.YesTokenID
+	state.Step = "awaiting_threshold"
 
 	// Delete the market selection message
 	deleteMsg := tgbotapi.NewDeleteMessage(callback.Message.Chat.ID, callback.Message.MessageID)
 	b.api.Send(deleteMsg)
 
-	// Check if it's a multi-outcome market (marketType 1 or no YesTokenID)
-	if marketDetails.MarketType != 0 || marketDetails.YesTokenID == "" {
-		// Multi-outcome market - ask for token ID
-		state.Step = "awaiting_token_id"
-		multiOutcomeMsg := fmt.Sprintf("Market selected: <b>%s</b>\n\n⚠️ This is a multi-outcome market. Please provide the specific token ID you want to track.\n\nYou can find token IDs by:\n1. Opening the market on Opinion.Trade\n2. Inspecting the specific outcome you want to track\n3. Looking for the token ID in the URL or market details", marketDetails.MarketTitle)
-		msg := tgbotapi.NewMessage(callback.Message.Chat.ID, multiOutcomeMsg)
-		msg.ParseMode = "HTML"
-		msg.DisableWebPagePreview = true
-		b.api.Send(msg)
-		return
-	}
-
-	// Binary market - use YesTokenID automatically
-	state.Data["token_id"] = marketDetails.YesTokenID
-	state.Step = "awaiting_threshold"
-
-	// Send threshold prompt
+	// Send threshold prompt with quick-select buttons
 	confirmMsg := fmt.Sprintf("Market selected: <b>%s</b>\n\n%s", marketDetails.MarketTitle, MsgThresholdPrompt)
 	msg := tgbotapi.NewMessage(callback.Message.Chat.ID, confirmMsg)
 	msg.ParseMode = "HTML"
 	msg.DisableWebPagePreview = true
+	msg.ReplyMarkup = BuildThresholdSelectionMenu()
 	b.api.Send(msg)
 }
 
@@ -254,4 +245,50 @@ func (b *Bot) handleBackToMenuCallback(ctx context.Context, callback *tgbotapi.C
 	keyboard := BuildMainMenu()
 	msg.ReplyMarkup = &keyboard
 	b.api.Send(msg)
+}
+
+// handleSelectThresholdCallback processes threshold selection from buttons
+func (b *Bot) handleSelectThresholdCallback(ctx context.Context, callback *tgbotapi.CallbackQuery) {
+	// Extract threshold value from callback data (e.g., "select_threshold_5" -> "5")
+	parts := strings.Split(callback.Data, "_")
+	if len(parts) < 3 {
+		b.log.Errorf("Invalid threshold callback data: %s", callback.Data)
+		return
+	}
+
+	thresholdStr := parts[2]
+	threshold, err := strconv.ParseFloat(thresholdStr, 64)
+	if err != nil {
+		b.log.Errorf("Failed to parse threshold: %v", err)
+		return
+	}
+
+	// Get user state
+	state := b.getUserState(callback.From.ID)
+	if state.MarketID == "" {
+		msg := tgbotapi.NewMessage(callback.Message.Chat.ID, "Please start by creating an alert first.")
+		b.api.Send(msg)
+		return
+	}
+
+	// Delete the threshold selection message
+	deleteMsg := tgbotapi.NewDeleteMessage(callback.Message.Chat.ID, callback.Message.MessageID)
+	b.api.Send(deleteMsg)
+
+	// Create the alert
+	b.createAlert(ctx, callback.Message.Chat.ID, callback.From.ID, state, threshold)
+}
+
+// handleCustomThresholdCallback prompts user to enter custom threshold
+func (b *Bot) handleCustomThresholdCallback(ctx context.Context, callback *tgbotapi.CallbackQuery) {
+	// Delete the threshold selection message
+	deleteMsg := tgbotapi.NewDeleteMessage(callback.Message.Chat.ID, callback.Message.MessageID)
+	b.api.Send(deleteMsg)
+
+	// Prompt for manual input
+	msg := tgbotapi.NewMessage(callback.Message.Chat.ID, "Please enter your custom threshold percentage (e.g., 15 for ±15%):")
+	msg.ParseMode = "HTML"
+	b.api.Send(msg)
+
+	// User state is already set to "awaiting_threshold", so manual input will be handled
 }

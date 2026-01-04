@@ -8,15 +8,17 @@ import (
 
 // Callback data constants
 const (
-	CallbackCreateAlert   = "create_alert"
-	CallbackMyAlerts      = "my_alerts"
-	CallbackMyMarkets     = "my_markets"
-	CallbackHelp          = "help"
-	CallbackDeleteAlert   = "delete_alert"
-	CallbackConfirmDelete = "confirm_delete"
-	CallbackCancelDelete  = "cancel_delete"
-	CallbackSelectMarket  = "select_market"
-	CallbackCustomMarket  = "custom_market"
+	CallbackCreateAlert     = "create_alert"
+	CallbackMyAlerts        = "my_alerts"
+	CallbackMyMarkets       = "my_markets"
+	CallbackHelp            = "help"
+	CallbackDeleteAlert     = "delete_alert"
+	CallbackConfirmDelete   = "confirm_delete"
+	CallbackCancelDelete    = "cancel_delete"
+	CallbackSelectMarket    = "select_market"
+	CallbackCustomMarket    = "custom_market"
+	CallbackSelectThreshold = "select_threshold"
+	CallbackCustomThreshold = "custom_threshold"
 )
 
 // BuildMainMenu creates the main menu inline keyboard
@@ -118,4 +120,26 @@ func BuildMarketSelectionMenu(featuredMarkets []FeaturedMarket) tgbotapi.InlineK
 	))
 
 	return tgbotapi.NewInlineKeyboardMarkup(rows...)
+}
+
+// BuildThresholdSelectionMenu creates a menu with common threshold values
+func BuildThresholdSelectionMenu() tgbotapi.InlineKeyboardMarkup {
+	return tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("1%", fmt.Sprintf("%s_1", CallbackSelectThreshold)),
+			tgbotapi.NewInlineKeyboardButtonData("2%", fmt.Sprintf("%s_2", CallbackSelectThreshold)),
+			tgbotapi.NewInlineKeyboardButtonData("5%", fmt.Sprintf("%s_5", CallbackSelectThreshold)),
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("10%", fmt.Sprintf("%s_10", CallbackSelectThreshold)),
+			tgbotapi.NewInlineKeyboardButtonData("25%", fmt.Sprintf("%s_25", CallbackSelectThreshold)),
+			tgbotapi.NewInlineKeyboardButtonData("50%", fmt.Sprintf("%s_50", CallbackSelectThreshold)),
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("📝 Enter Custom Value", CallbackCustomThreshold),
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("« Back to Menu", "back_to_menu"),
+		),
+	)
 }

@@ -91,10 +91,10 @@ func (b *Bot) handleMarketIDInput(ctx context.Context, message *tgbotapi.Message
 	state.Data["token_id"] = marketDetails.YesTokenID
 	state.Step = "awaiting_threshold"
 
-	// Confirm market and ask for threshold
+	// Confirm market and ask for threshold with quick-select buttons
 	confirmMsg := fmt.Sprintf("✅ Market found: <b>%s</b>\n\n%s",
 		marketDetails.MarketTitle, MsgThresholdPrompt)
-	b.SendMessage(message.Chat.ID, confirmMsg, nil)
+	b.SendMessage(message.Chat.ID, confirmMsg, BuildThresholdSelectionMenu())
 }
 
 // handleThresholdInput processes threshold percentage input
@@ -108,13 +108,17 @@ func (b *Bot) handleThresholdInput(ctx context.Context, message *tgbotapi.Messag
 	}
 
 	state := b.getUserState(message.From.ID)
+	b.createAlert(ctx, message.Chat.ID, message.From.ID, state, threshold)
+}
 
+// createAlert is a helper function to create an alert with the given threshold
+func (b *Bot) createAlert(ctx context.Context, chatID int64, userID int64, state *UserState, threshold float64) {
 	// Get user from database
-	user, err := b.storage.GetUserByTelegramID(ctx, message.From.ID)
+	user, err := b.storage.GetUserByTelegramID(ctx, userID)
 	if err != nil {
 		b.log.Errorf("Failed to get user: %v", err)
-		b.SendMessage(message.Chat.ID, MsgErrorOccurred, BuildMainMenu())
-		b.clearUserState(message.From.ID)
+		b.SendMessage(chatID, MsgErrorOccurred, BuildMainMenu())
+		b.clearUserState(userID)
 		return
 	}
 
@@ -133,19 +137,19 @@ func (b *Bot) handleThresholdInput(ctx context.Context, message *tgbotapi.Messag
 	_, err = b.storage.CreateAlert(ctx, user.ID, state.MarketID, marketName, tokenID, threshold)
 	if err != nil {
 		if strings.Contains(err.Error(), "cannot track more than") {
-			b.SendMessage(message.Chat.ID, MsgMaxMarketsReached, BuildMainMenu())
+			b.SendMessage(chatID, MsgMaxMarketsReached, BuildMainMenu())
 		} else {
 			b.log.Errorf("Failed to create alert: %v", err)
-			b.SendMessage(message.Chat.ID, MsgErrorOccurred, BuildMainMenu())
+			b.SendMessage(chatID, MsgErrorOccurred, BuildMainMenu())
 		}
-		b.clearUserState(message.From.ID)
+		b.clearUserState(userID)
 		return
 	}
 
 	// Success - show market name
 	successMsg := fmt.Sprintf("✅ Alert created successfully!\n\n<b>Market:</b> %s\n<b>Threshold:</b> ±%.1f%%\n\nYou'll be notified when the price changes by this amount.",
 		marketName, threshold)
-	b.SendMessage(message.Chat.ID, successMsg, BuildMainMenu())
-	b.clearUserState(message.From.ID)
+	b.SendMessage(chatID, successMsg, BuildMainMenu())
+	b.clearUserState(userID)
 }
 
