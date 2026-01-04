@@ -65,7 +65,7 @@ func FormatAlertNotification(marketTitle, marketID string, previousPrice, curren
 
 <b>Market:</b> <a href="%s">%s</a>
 <b>Current Price:</b> $%.4f
-<b>Price 1 minute ago:</b> $%.4f
+<b>1 minute ago:</b> $%.4f
 <b>Change:</b> %s%.2f%% (threshold: ±%.1f%%)
 
 <b>Triggered:</b> %s UTC`,
