@@ -97,16 +97,13 @@ func (s *Storage) RunMigrations() error {
 		// Add unique constraint for one alert per market per user
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_alerts_user_market_unique ON alerts(user_id, market_id) WHERE is_active = true`,
 
-		// Increase side column size to handle longer values like "sell-market"
-		`ALTER TABLE token_prices ALTER COLUMN side TYPE VARCHAR(20)`,
-
 		// Token prices table
 		`CREATE TABLE IF NOT EXISTS token_prices (
 			id BIGSERIAL PRIMARY KEY,
 			token_id VARCHAR(255) NOT NULL,
 			market_id VARCHAR(255) NOT NULL,
 			price DECIMAL NOT NULL,
-			side VARCHAR(10),
+			side VARCHAR(20),
 			size DECIMAL,
 			recorded_at TIMESTAMP NOT NULL DEFAULT NOW()
 		)`,
