@@ -54,6 +54,14 @@ The bot tracks market prices and alerts you when prices make changes and spikes.
 
 // FormatAlertNotification formats a price spike alert message
 func FormatAlertNotification(marketTitle, marketID string, previousPrice, currentPrice, changePct, threshold float64) string {
+	// Choose color indicator based on direction
+	var colorIndicator string
+	if changePct > 0 {
+		colorIndicator = "🟢"
+	} else {
+		colorIndicator = "🔴"
+	}
+
 	direction := "+"
 	if changePct < 0 {
 		direction = ""
@@ -63,20 +71,25 @@ func FormatAlertNotification(marketTitle, marketID string, previousPrice, curren
 
 	return fmt.Sprintf(`📈 <b>Price Spike Alert!</b>
 
-<b>Market:</b> <a href="%s">%s</a>
-<b>Current Price:</b> $%.4f
-<b>1 minute ago:</b> $%.4f
-<b>Change:</b> %s%.2f%% (threshold: ±%.1f%%)
+📌 <b>Market:</b> <a href="%s">%s</a>
 
-<b>Triggered:</b> %s UTC`,
+💵 <b>Price Movement:</b>
+   • Now: $%.4f
+   • 1m ago: $%.4f
+   • Change: %s %s%.2f%%
+
+⚙️ <b>Alert Settings:</b>
+   • Threshold: ±%.1f%%
+   • Triggered: %s UTC`,
 		marketURL,
 		marketTitle,
 		currentPrice,
 		previousPrice,
+		colorIndicator,
 		direction,
 		changePct,
 		threshold,
-		time.Now().UTC().Format("2006-01-02 15:04:05"),
+		time.Now().UTC().Format("15:04:05"),
 	)
 }
 
