@@ -39,6 +39,19 @@ func NewBot(token string, storage *storage.Storage, apiClient *api.Client, log *
 
 	log.Infof("Authorized on account %s", botAPI.Self.UserName)
 
+	// Set up bot commands menu
+	commands := []tgbotapi.BotCommand{
+		{Command: "start", Description: "Start bot and show main menu"},
+		{Command: "help", Description: "Show help message"},
+		{Command: "create", Description: "Create new alert"},
+		{Command: "alerts", Description: "View my alerts"},
+	}
+
+	commandConfig := tgbotapi.NewSetMyCommands(commands...)
+	if _, err := botAPI.Request(commandConfig); err != nil {
+		log.Warnf("Failed to set bot commands: %v", err)
+	}
+
 	return &Bot{
 		api:        botAPI,
 		storage:    storage,

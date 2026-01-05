@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/qmitry/opinion-alert-bot/internal/storage"
 )
 
 // handleMessage processes incoming text messages
@@ -49,6 +50,10 @@ func (b *Bot) handleCommand(ctx context.Context, message *tgbotapi.Message) {
 		b.handleStart(ctx, message)
 	case "help":
 		b.handleHelp(ctx, message)
+	case "create":
+		b.handleCreateCommand(ctx, message)
+	case "alerts":
+		b.handleAlertsCommand(ctx, message)
 	default:
 		b.SendMessage(message.Chat.ID, MsgUnknownCommand, BuildMainMenu())
 	}
@@ -63,6 +68,36 @@ func (b *Bot) handleStart(ctx context.Context, message *tgbotapi.Message) {
 // handleHelp handles the /help command
 func (b *Bot) handleHelp(ctx context.Context, message *tgbotapi.Message) {
 	b.SendMessage(message.Chat.ID, MsgHelp, BuildBackButton())
+}
+
+// handleCreateCommand handles the /create command
+func (b *Bot) handleCreateCommand(ctx context.Context, message *tgbotapi.Message) {
+	b.clearUserState(message.From.ID)
+
+	// Fetch random tracked markets from database
+	randomMarkets, err := b.storage.GetRandomTrackedMarkets(ctx, 5)
+	if err != nil {
+		b.log.Errorf("Failed to get random markets: %v", err)
+		randomMarkets = []storage.MarketWithName{}
+	}
+
+	// Convert to FeaturedMarket format
+	featuredMarkets := make([]FeaturedMarket, len(randomMarkets))
+	for i, market := range randomMarkets {
+		featuredMarkets[i] = FeaturedMarket{
+			ID:   market.MarketID,
+			Name: market.MarketName,
+		}
+	}
+
+	keyboard := BuildMarketSelectionMenu(featuredMarkets)
+	b.SendMessage(message.Chat.ID, MsgSelectMarket, keyboard)
+}
+
+// handleAlertsCommand handles the /alerts command
+func (b *Bot) handleAlertsCommand(ctx context.Context, message *tgbotapi.Message) {
+	b.clearUserState(message.From.ID)
+	b.showMyAlerts(ctx, message.Chat.ID, message.From.ID)
 }
 
 // handleMarketIDInput processes market ID input
